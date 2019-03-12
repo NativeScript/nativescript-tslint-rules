@@ -19,8 +19,14 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "lint": "npm run lint:src",
-    "lint:src": "tslint --project ./tsconfig.json -c ./tslint.json 'src/**/*.ts'"
+    "lint": "npm run lint:src && npm run lint:test",
+    "lint:src": "tslint --project ./tsconfig.json -c ./tslint.json 'src/**/*.ts'",
+    "lint:test": "tslint --project ./tsconfig.json -c ./tslint.json 'test/**/*.ts'",
+    "lint:fix": "npm run lint:src:fix && npm run lint:test:fix",
+    "lint:src:fix": "tslint --project ./tsconfig.json -c ./tslint.json 'src/**/*.ts' --fix",
+    "lint:test:fix": "tslint --project ./tsconfig.json -c ./tslint.json 'test/**/*.ts' --fix",
+    "test": "jest",
+    "test:debug": "node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand"
   },
   "dependencies": {
     "@phenomnomnominal/tsquery": "~3.0.0"
@@ -30,7 +36,29 @@
     "typescript": "^3.3.0"
   },
   "devDependencies": {
+    "@types/jest": "^24.0.11",
+    "jest": "^24.4.0",
+    "ts-jest": "^24.0.0",
     "tslint": "^5.13.0",
     "typescript": "^3.3.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "globals": {
+      "__TS_CONFIG__": "tsconfig.json"
+    },
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ],
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "<rootDir>/src/**"
+    ],
+    "coverageDirectory": "<rootDir>/reports/coverage",
+    "transform": {
+      "\\.(ts)$": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+    },
+    "testRegex": "/test/.*\\.spec\\.ts$"
   }
 }

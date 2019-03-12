@@ -1,6 +1,7 @@
 # Outputs
 src/**/*.js
 dist
+reports
 
 # IDEs
 .idea/
