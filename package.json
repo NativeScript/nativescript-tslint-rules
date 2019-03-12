@@ -16,6 +16,9 @@
     "Stanimira Vlaeva <Stanimira.Vlaeva@progress.com>"
   ],
   "license": "Apache-2.0",
+  "files": [
+      "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
@@ -27,7 +30,8 @@
     "lint:test:fix": "tslint --project ./tsconfig.json -c ./tslint.json 'test/**/*.ts' --fix",
     "test": "jest",
     "test:debug": "node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand",
-    "prettier": "prettier --write \"**/*.{js,ts,tsx,json,md}\""
+    "prettier": "prettier --write \"**/*.{js,ts,tsx,json,md}\"",
+    "prepublishOnly": "npm run build && npm run lint && npm run test"
   },
   "dependencies": {
     "@phenomnomnominal/tsquery": "~3.0.0"
