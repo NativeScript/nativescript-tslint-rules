@@ -1,5 +1,5 @@
 {
-  "name": "nativescript-tslint-rules",
+  "name": "@nativescript/tslint-rules",
   "version": "0.0.1",
   "description": "A set of TSLint rules for NativeScript projects.",
   "main": "dist/index.js",
