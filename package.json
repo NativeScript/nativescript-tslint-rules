@@ -1,0 +1,30 @@
+{
+  "name": "nativescript-tslint-rules",
+  "version": "0.0.1",
+  "description": "A set of TSLint rules for NativeScript projects.",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "keywords": [
+    "NativeScript",
+    "typescript",
+    "tslint"
+  ],
+  "author": {
+    "name": "NativeScript Team"
+  },
+  "contributors": [
+    "Stanimira Vlaeva <Stanimira.Vlaeva@progress.com>"
+  ],
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "dependencies": {
+    "@phenomnomnominal/tsquery": "~3.0.0"
+  },
+  "peerDependencies": {
+    "tslint": "^5.13.0",
+    "typescript": "^3.1.0"
+  }
+}
