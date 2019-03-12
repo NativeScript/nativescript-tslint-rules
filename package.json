@@ -18,13 +18,19 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
-    "watch": "tsc -w"
+    "watch": "tsc -w",
+    "lint": "npm run lint:src",
+    "lint:src": "tslint --project ./tsconfig.json -c ./tslint.json 'src/**/*.ts'"
   },
   "dependencies": {
     "@phenomnomnominal/tsquery": "~3.0.0"
   },
   "peerDependencies": {
     "tslint": "^5.13.0",
-    "typescript": "^3.1.0"
+    "typescript": "^3.3.0"
+  },
+  "devDependencies": {
+    "tslint": "^5.13.0",
+    "typescript": "^3.3.0"
   }
 }
