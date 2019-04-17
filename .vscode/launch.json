@@ -29,6 +29,38 @@
         "windows": {
           "program": "${workspaceFolder}/node_modules/jest/bin/jest",
         }
+      },
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Playground Project",
+        "program": "${workspaceFolder}/node_modules/.bin/tslint",
+        "args": [
+          "-p", "./playground"
+        ],
+        "console": "integratedTerminal",
+        "internalConsoleOptions": "neverOpen",
+        "disableOptimisticBPs": true,
+        "windows": {
+          "program": "${workspaceFolder}/node_modules/jest/bin/jest",
+        }
+      },
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Playground File",
+        "program": "${workspaceFolder}/node_modules/.bin/tslint",
+        "args": [
+          "./src/a.ts",
+          "-c", "./tslint.json"
+        ],
+        "cwd": "${workspaceFolder}/playground",
+        "console": "integratedTerminal",
+        "internalConsoleOptions": "neverOpen",
+        "disableOptimisticBPs": true,
+        "windows": {
+          "program": "${workspaceFolder}/node_modules/jest/bin/jest",
+        }
       }
     ]
   }

@@ -1,0 +1,17 @@
+{
+    "defaultSeverity": "error",
+    "jsRules": {},
+    "rules": {
+        "prefer-mapped-imports": [
+            true,
+            {
+                "prefix": "@prefix",
+                "prefix-mapped-to": "src",
+                "base-url": "."
+            }
+        ]
+    },
+    "rulesDirectory": [
+        "../dist"
+    ]
+}

@@ -6,8 +6,21 @@ import { join as joinPath, dirname as getDirname } from "path";
 interface WalkerOptions {
     platformRemapFn?: (name: string) => string;
 }
+const OPTION_PREFIX = "prefix";
+const OPTION_PREFIX_MAPPED = "prefix-mapped-to";
+const OPTION_BASE_URL = "base-url";
 
-const OPTION_IMPORT_PREFIX = "import-prefix";
+export interface RemapOptions {
+    baseUrl: string;
+    prefix: string;
+    prefixMappedTo: string;
+}
+
+export interface RuleArgs {
+    [OPTION_BASE_URL]: string;
+    [OPTION_PREFIX]: string;
+    [OPTION_PREFIX_MAPPED]: string;
+}
 
 // TODO: Add documentation for the recommended remapped paths and link it in the error message.
 const FAILURE_BODY_RELATIVE = "module is being loaded from a relative path. Please use a remapped path.";
@@ -20,28 +33,28 @@ const illegalInsideRegex = /(\/|\\)\.\.?\1/;
 
 export class Rule extends Lint.Rules.OptionallyTypedRule {
     static readonly metadata: Lint.IRuleMetadata = {
-        ruleName: "relative-to-mapped-imports",
+        ruleName: "prefer-mapped-imports",
         type: "maintainability",
         description: "Prefer using mapped paths when importing external modules or ES6 import declarations.",
         options: {
-            type: "array",
-            items: {
-                type: "string",
-                enum: [OPTION_IMPORT_PREFIX]
-            },
-            minLength: 0,
-            maxLength: 1
+            type: "object",
+            properties: {
+                [OPTION_PREFIX]: { type: "string" },
+                [OPTION_PREFIX_MAPPED]: { type: "string" },
+                [OPTION_BASE_URL]: { type: "string" }
+            }
         },
-        optionsDescription: `One argument may be optionally provided: \n\n' +
-            '* \`${OPTION_IMPORT_PREFIX}\` specifies the prefix for the mapped imports.`,
-        typescriptOnly: false,
         // TODO: Add documentation for the recommended remapped paths and link it in the rationale.
+        optionsDescription: `${OPTION_PREFIX}\` specifies the prefix for the mapped imports.`,
+        typescriptOnly: false,
         rationale: "..."
     };
-    
+
     apply(sourceFile: ts.SourceFile) {
-        const ruleOptions = this.getOptions();
-        const walkerOptions = this.parseRuleOptions(ruleOptions);
+        const remapOptions = this.parseRuleOptions(this.ruleArguments);
+        const walkerOptions = {
+            platformRemapFn: remapOptions ? createRemapFn(sourceFile, remapOptions) : undefined
+        };
 
         return this.applyWithFunction(sourceFile, walk, walkerOptions);
     }
@@ -51,31 +64,35 @@ export class Rule extends Lint.Rules.OptionallyTypedRule {
         if (!compilerOptions) {
             throw new Error(`Base URL and path mappings must be specified as TS compiler options!`);
         }
-        const ruleOptions = this.parseCompilerOptions(compilerOptions);
+        const remapOptions = this.parseCompilerOptions(compilerOptions);
+        const walkerOptions = {
+            platformRemapFn: createRemapFn(sourceFile, remapOptions)
+        };
 
-        return this.applyWithFunction(sourceFile, walk, ruleOptions);
+        return this.applyWithFunction(sourceFile, walk, walkerOptions);
     }
 
-    private parseRuleOptions(options: Lint.IOptions): WalkerOptions {
-        const prefix = (<any>options).importPrefix;
-
-        if (!prefix) {
-            return {};
+    private parseRuleOptions(ruleArgs: Array<RuleArgs>): RemapOptions | undefined {
+        if (
+            !(
+                ruleArgs &&
+                ruleArgs[0] &&
+                ruleArgs[0][OPTION_PREFIX] &&
+                ruleArgs[0][OPTION_PREFIX_MAPPED] &&
+                ruleArgs[0][OPTION_BASE_URL]
+            )
+        ) {
+            return undefined;
         }
 
-        const platformRemapFn = (relativePath: string) => {
-            // TODO: Properly detect the relative parts of the import path
-            const basePath = "./";
-
-            return relativePath.replace(basePath, prefix);
-        };
-
         return {
-            platformRemapFn
+            prefix: ruleArgs[0][OPTION_PREFIX],
+            prefixMappedTo: ruleArgs[0][OPTION_PREFIX_MAPPED],
+            baseUrl: ruleArgs[0][OPTION_BASE_URL]
         };
     }
 
-    private parseCompilerOptions(compilerOptions: ts.CompilerOptions): WalkerOptions {
+    private parseCompilerOptions(compilerOptions: ts.CompilerOptions): RemapOptions {
         let baseUrl = compilerOptions.baseUrl;
         if (!baseUrl) {
             throw new Error(`Base url is not specified!`);
@@ -92,8 +109,7 @@ export class Rule extends Lint.Rules.OptionallyTypedRule {
 
         const entries = Object.entries(paths);
 
-        const isMobileMapping = (path: string) =>
-            ["tns", "android", "ios"].some((platform) => path.includes(platform));
+        const isMobileMapping = (path: string) => ["tns", "android", "ios"].some((platform) => path.includes(platform));
         const isWebMapping = (path: string) => path.includes("web");
 
         const platformEntry = entries.find((entry) => {
@@ -101,31 +117,25 @@ export class Rule extends Lint.Rules.OptionallyTypedRule {
             // entry[1] -> [src/*.web, src/*]
             const platforms = entry[1];
 
-            return platforms.some((platform) =>
-                isMobileMapping(platform) || isWebMapping(platform)
-            );
+            return platforms.some((platform) => isMobileMapping(platform) || isWebMapping(platform));
         });
 
         if (!platformEntry) {
             throw new Error(`Platform mapping is not found in the configured TS paths!`);
         }
 
-        const platformRemapFn = (relativePath: string) => {
-            // TODO: Properly detect the relative parts of the import path
-            const basePath = "./";
-
-            return relativePath.replace(basePath, platformEntry[0].substr(0, platformEntry[0].indexOf("*")));
-        };
+        const prefix = platformEntry[0].substr(0, platformEntry[0].indexOf("*"));
+        const prefixMappedTo = platformEntry[1][0].substr(0, platformEntry[1][0].indexOf("*"));
 
         return {
-            platformRemapFn
+            baseUrl,
+            prefix,
+            prefixMappedTo
         };
-
     }
 }
 
 function walk(ctx: Lint.WalkContext<WalkerOptions>) {
-    const dirname = getDirname(ctx.sourceFile.fileName);
     const { platformRemapFn } = ctx.options;
 
     function getValidationErrorBody(expression: ts.Expression): string | undefined {
@@ -151,7 +161,11 @@ function walk(ctx: Lint.WalkContext<WalkerOptions>) {
         if (tsutils.isExternalModuleReference(node)) {
             const errorBody = getValidationErrorBody(node.expression);
             if (errorBody !== undefined) {
-                ctx.addFailureAt(node.getStart(), node.getWidth(), `External ${errorBody}: ${node.getText()}`);
+                if (!platformRemapFn) {
+                    ctx.addFailureAt(node.getStart(), node.getWidth(), `External ${errorBody}: ${node.getText()}`);
+                } else {
+                    // TODO: Create fix
+                }
             }
         } else if (tsutils.isImportDeclaration(node)) {
             const errorBody = getValidationErrorBody(node.moduleSpecifier);
@@ -161,10 +175,9 @@ function walk(ctx: Lint.WalkContext<WalkerOptions>) {
                     ctx.addFailureAt(node.getStart(), node.getWidth(), `Imported ${errorBody}: ${node.getText()}`);
                 } else {
                     // Create a fix
-                    const moduleSpecifier = (<ts.ImportDeclaration>node).moduleSpecifier;
-                    const imp = moduleSpecifier.getText().substr(1, moduleSpecifier.getText().length - 2);
-                    const absoluteModuleSpecifierPath = joinPath(dirname, imp);
-                    const remappedImport = `'${platformRemapFn(absoluteModuleSpecifierPath)}'`;
+                    const moduleSpecifier = node.moduleSpecifier;
+                    const importText = moduleSpecifier.getText().substr(1, moduleSpecifier.getText().length - 2);
+                    const remappedImport = `'${platformRemapFn(importText)}'`;
 
                     const fix = new Lint.Replacement(
                         moduleSpecifier.getStart(),
@@ -181,4 +194,57 @@ function walk(ctx: Lint.WalkContext<WalkerOptions>) {
     }
 
     return ts.forEachChild(ctx.sourceFile, cb);
+}
+
+export function parseCompilerOptions(compilerOptions: ts.CompilerOptions): RemapOptions {
+    let baseUrl = compilerOptions.baseUrl;
+    if (!baseUrl) {
+        throw new Error(`Base url is not specified!`);
+    }
+
+    if (!baseUrl.endsWith("/")) {
+        baseUrl = baseUrl + "/";
+    }
+
+    const paths = compilerOptions.paths;
+    if (!paths) {
+        throw new Error(`Path mappings are not specified!`);
+    }
+
+    const entries = Object.entries(paths);
+
+    const isMobileMapping = (path: string) => ["tns", "android", "ios"].some((platform) => path.includes(platform));
+    const isWebMapping = (path: string) => path.includes("web");
+
+    const platformEntry = entries.find((entry) => {
+        // entry[0] -> @src/*
+        // entry[1] -> [src/*.web, src/*]
+        const platforms = entry[1];
+
+        return platforms.some((platform) => isMobileMapping(platform) || isWebMapping(platform));
+    });
+
+    if (!platformEntry) {
+        throw new Error(`Platform mapping is not found in the configured TS paths!`);
+    }
+
+    const prefix = platformEntry[0].substr(0, platformEntry[0].indexOf("*"));
+    const prefixMappedTo = platformEntry[1][0].substr(0, platformEntry[1][0].indexOf("*"));
+
+    return {
+        baseUrl,
+        prefix,
+        prefixMappedTo
+    };
+}
+
+function createRemapFn(sourceFile: ts.SourceFile, opts: RemapOptions): (name: string) => string {
+    const fileFolder = getDirname(sourceFile.fileName);
+    const basePath = joinPath(opts.baseUrl, opts.prefixMappedTo);
+
+    return (relativeImportPath) => {
+        const absPathToImport = joinPath(fileFolder, relativeImportPath);
+
+        return absPathToImport.replace(basePath, opts.prefix);
+    };
 }
