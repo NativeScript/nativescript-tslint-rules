@@ -1,6 +1,6 @@
 import { RuleFailure, Replacement } from "tslint";
 import { isArray } from "util";
-import { SourceFile, CompilerOptions } from "typescript";
+import { SourceFile, CompilerOptions, Program } from "typescript";
 import { tsquery } from "@phenomnomnominal/tsquery";
 
 import { Rule, RuleArgs } from "../src/preferMappedImportsRule";
@@ -101,6 +101,101 @@ describe("prefer-mapped-imports test cases with applyWithProgram", () => {
     });
 });
 
+describe("prefer-mapped-imports no fix available on missing options", () => {
+    const src = `import { AppComponent } from './app.component';`;
+    const file = `app.module.ts`;
+    function getRuleWithOptions(args: any): Rule {
+        return new Rule({
+            ruleArguments: [args],
+            ruleName: "prefer-mapped-imports",
+            ruleSeverity: "error",
+            disabledIntervals: []
+        });
+    }
+
+    describe("with apply", () => {
+        it("missing baseUrl", () => {
+            const rule = getRuleWithOptions({
+                prefix: "@src/",
+                "prefix-mapped-to": prefixMap
+            });
+
+            const errors = rule.apply(tsquery.ast(src, file));
+
+            expect(errors.length).toEqual(1);
+            expect(errors[0].hasFix()).toBeFalsy();
+        });
+        it("missing prefix", () => {
+            const rule = getRuleWithOptions({
+                "prefix-mapped-to": prefixMap,
+                baseUrl: "./"
+            });
+
+            const errors = rule.apply(tsquery.ast(src, file));
+
+            expect(errors.length).toEqual(1);
+            expect(errors[0].hasFix()).toBeFalsy();
+        });
+        it("missing prefixMappedTo", () => {
+            const rule = getRuleWithOptions({
+                prefix: "@src/",
+                baseUrl: "./"
+            });
+
+            const errors = rule.apply(tsquery.ast(src, file));
+
+            expect(errors.length).toEqual(1);
+            expect(errors[0].hasFix()).toBeFalsy();
+        });
+    });
+
+    describe("with applyWithProgram", () => {
+        const programRule = getRuleWithOptions(ruleArgs);
+
+        it("missing baseUrl", () => {
+            const options: CompilerOptions = {
+                paths: {
+                    "@src/*": ["src/*.tns.ts", "src/*.android.ts", "src/*.ios.ts", "src/*"]
+                }
+            };
+
+            const errors = programRule.applyWithProgram(tsquery.ast(src, file), getProgramMock(options));
+
+            expect(errors.length).toEqual(1);
+            expect(errors[0].hasFix()).toBeFalsy();
+        });
+
+        it("missing paths", () => {
+            const options: CompilerOptions = {
+                baseUrl: "./app/root"
+            };
+
+            const errors = programRule.applyWithProgram(tsquery.ast(src, file), getProgramMock(options));
+
+            expect(errors.length).toEqual(1);
+            expect(errors[0].hasFix()).toBeFalsy();
+        });
+
+        it("missing valid paths entry", () => {
+            const options: CompilerOptions = {
+                baseUrl: "./app/root",
+                paths: {
+                    "@src/*": ["some/path/*"]
+                }
+            };
+
+            const errors = programRule.applyWithProgram(tsquery.ast(src, file), getProgramMock(options));
+
+            expect(errors.length).toEqual(1);
+            expect(errors[0].hasFix()).toBeFalsy();
+        });
+    });
+});
+
+function getProgramMock(opts: CompilerOptions): Program {
+    return <any>{ getCompilerOptions: () => opts };
+}
+
 function testRuleWithApply(tc: TestCase) {
     const applyFn = (sourceFile: SourceFile, rule: Rule) => {
         return rule.apply(sourceFile);
@@ -110,12 +205,8 @@ function testRuleWithApply(tc: TestCase) {
 }
 
 function testRuleWithApplyWithProgram(tc: TestCase) {
-    const programMock = {
-        getCompilerOptions: () => tc.compilerOptions
-    };
-
     const applyFn = (sourceFile: SourceFile, rule: Rule) => {
-        return rule.applyWithProgram(sourceFile, <any>programMock);
+        return rule.applyWithProgram(sourceFile, getProgramMock(tc.compilerOptions));
     };
     testCaseTemplate(tc, applyFn);
 }

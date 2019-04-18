@@ -52,6 +52,7 @@ export class Rule extends Lint.Rules.OptionallyTypedRule {
 
     apply(sourceFile: ts.SourceFile) {
         const remapOptions = this.parseRuleOptions(this.ruleArguments);
+
         const walkerOptions = {
             platformRemapFn: remapOptions ? createRemapFn(sourceFile, remapOptions) : undefined
         };
@@ -60,13 +61,10 @@ export class Rule extends Lint.Rules.OptionallyTypedRule {
     }
 
     applyWithProgram(sourceFile: ts.SourceFile, program: ts.Program): Array<Lint.RuleFailure> {
-        const compilerOptions = program.getCompilerOptions();
-        if (!compilerOptions) {
-            throw new Error(`Base URL and path mappings must be specified as TS compiler options!`);
-        }
-        const remapOptions = this.parseCompilerOptions(compilerOptions);
+        const remapOptions = parseCompilerOptions(program.getCompilerOptions());
+
         const walkerOptions = {
-            platformRemapFn: createRemapFn(sourceFile, remapOptions)
+            platformRemapFn: remapOptions ? createRemapFn(sourceFile, remapOptions) : undefined
         };
 
         return this.applyWithFunction(sourceFile, walk, walkerOptions);
@@ -91,48 +89,43 @@ export class Rule extends Lint.Rules.OptionallyTypedRule {
             baseUrl: ruleArgs[0][OPTION_BASE_URL]
         };
     }
+}
 
-    private parseCompilerOptions(compilerOptions: ts.CompilerOptions): RemapOptions {
-        let baseUrl = compilerOptions.baseUrl;
-        if (!baseUrl) {
-            throw new Error(`Base url is not specified!`);
-        }
-
-        if (!baseUrl.endsWith("/")) {
-            baseUrl = baseUrl + "/";
-        }
-
-        const paths = compilerOptions.paths;
-        if (!paths) {
-            throw new Error(`Path mappings are not specified!`);
-        }
-
-        const entries = Object.entries(paths);
-
-        const isMobileMapping = (path: string) => ["tns", "android", "ios"].some((platform) => path.includes(platform));
-        const isWebMapping = (path: string) => path.includes("web");
-
-        const platformEntry = entries.find((entry) => {
-            // entry[0] -> @src/*
-            // entry[1] -> [src/*.web, src/*]
-            const platforms = entry[1];
-
-            return platforms.some((platform) => isMobileMapping(platform) || isWebMapping(platform));
-        });
-
-        if (!platformEntry) {
-            throw new Error(`Platform mapping is not found in the configured TS paths!`);
-        }
-
-        const prefix = platformEntry[0].substr(0, platformEntry[0].indexOf("*"));
-        const prefixMappedTo = platformEntry[1][0].substr(0, platformEntry[1][0].indexOf("*"));
-
-        return {
-            baseUrl,
-            prefix,
-            prefixMappedTo
-        };
+export function parseCompilerOptions(compilerOptions: ts.CompilerOptions): RemapOptions | undefined {
+    if (!compilerOptions || !compilerOptions.baseUrl || !compilerOptions.paths) {
+        return undefined;
     }
+
+    let baseUrl = compilerOptions.baseUrl;
+    if (!baseUrl.endsWith("/")) {
+        baseUrl = baseUrl + "/";
+    }
+
+    const paths = compilerOptions.paths;
+    const entries = Object.entries(paths);
+
+    const isMobileMapping = (path: string) => ["tns", "android", "ios"].some((platform) => path.includes(platform));
+    const isWebMapping = (path: string) => path.includes("web");
+
+    const platformEntry = entries.find((entry) => {
+        // entry[0] -> @src/*
+        // entry[1] -> [src/*.web, src/*]
+        return entry[1].some((platform) => isMobileMapping(platform) || isWebMapping(platform));
+    });
+
+    if (!platformEntry) {
+        // `Platform mapping is not found in the configured TS paths!`
+        return undefined;
+    }
+
+    const prefix = platformEntry[0].substr(0, platformEntry[0].indexOf("*"));
+    const prefixMappedTo = platformEntry[1][0].substr(0, platformEntry[1][0].indexOf("*"));
+
+    return {
+        baseUrl,
+        prefix,
+        prefixMappedTo
+    };
 }
 
 function walk(ctx: Lint.WalkContext<WalkerOptions>) {
@@ -194,48 +187,6 @@ function walk(ctx: Lint.WalkContext<WalkerOptions>) {
     }
 
     return ts.forEachChild(ctx.sourceFile, cb);
-}
-
-export function parseCompilerOptions(compilerOptions: ts.CompilerOptions): RemapOptions {
-    let baseUrl = compilerOptions.baseUrl;
-    if (!baseUrl) {
-        throw new Error(`Base url is not specified!`);
-    }
-
-    if (!baseUrl.endsWith("/")) {
-        baseUrl = baseUrl + "/";
-    }
-
-    const paths = compilerOptions.paths;
-    if (!paths) {
-        throw new Error(`Path mappings are not specified!`);
-    }
-
-    const entries = Object.entries(paths);
-
-    const isMobileMapping = (path: string) => ["tns", "android", "ios"].some((platform) => path.includes(platform));
-    const isWebMapping = (path: string) => path.includes("web");
-
-    const platformEntry = entries.find((entry) => {
-        // entry[0] -> @src/*
-        // entry[1] -> [src/*.web, src/*]
-        const platforms = entry[1];
-
-        return platforms.some((platform) => isMobileMapping(platform) || isWebMapping(platform));
-    });
-
-    if (!platformEntry) {
-        throw new Error(`Platform mapping is not found in the configured TS paths!`);
-    }
-
-    const prefix = platformEntry[0].substr(0, platformEntry[0].indexOf("*"));
-    const prefixMappedTo = platformEntry[1][0].substr(0, platformEntry[1][0].indexOf("*"));
-
-    return {
-        baseUrl,
-        prefix,
-        prefixMappedTo
-    };
 }
 
 function createRemapFn(sourceFile: ts.SourceFile, opts: RemapOptions): (name: string) => string {
