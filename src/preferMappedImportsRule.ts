@@ -45,7 +45,10 @@ export class Rule extends Lint.Rules.OptionallyTypedRule {
             }
         },
         // TODO: Add documentation for the recommended remapped paths and link it in the rationale.
-        optionsDescription: `${OPTION_PREFIX}\` specifies the prefix for the mapped imports.`,
+        optionsDescription: Lint.Utils.dedent`
+            \`${OPTION_PREFIX}\` specifies the prefix for the mapped imports (usually "@src/").
+            \`${OPTION_PREFIX_MAPPED}\` specifies folder that is mapped to the prefix (usually "src/").
+            \`${OPTION_BASE_URL}\` specifies the base url of the typescript program (usually ".")`,
         typescriptOnly: false,
         rationale: "..."
     };

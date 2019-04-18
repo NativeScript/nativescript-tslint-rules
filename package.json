@@ -13,7 +13,8 @@
     "name": "NativeScript Team"
   },
   "contributors": [
-    "Stanimira Vlaeva <Stanimira.Vlaeva@progress.com>"
+    "Stanimira Vlaeva <Stanimira.Vlaeva@progress.com>",
+    "Alexander Vakrilov <Alexander.Vakrilov@progress.com>"
   ],
   "license": "Apache-2.0",
   "files": [
