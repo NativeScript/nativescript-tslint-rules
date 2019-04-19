@@ -1,5 +1,4 @@
 import { RuleFailure, Replacement } from "tslint";
-import { isArray } from "util";
 import { SourceFile, CompilerOptions, Program } from "typescript";
 import { tsquery } from "@phenomnomnominal/tsquery";
 
@@ -237,16 +236,7 @@ function testCaseTemplate(tc: TestCase, applyFn: (sourceFile: SourceFile, rule: 
 }
 
 function applyFixes(src: string, errors: Array<RuleFailure>): string {
-    const fixes = errors.reduce((cur, fail) => {
-        const failFixes = fail.getFix();
-        if (isArray(failFixes)) {
-            return cur.concat(failFixes);
-        } else if (failFixes) {
-            return cur.concat([failFixes]);
-        } else {
-            return cur;
-        }
-    }, new Array<Replacement>());
+    const fixes = errors.filter((error) => error.hasFix()).map((error) => error.getFix()!);
 
     return Replacement.applyFixes(src, fixes);
 }
