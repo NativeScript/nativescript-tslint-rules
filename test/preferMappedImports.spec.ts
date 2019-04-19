@@ -21,7 +21,7 @@ const compilerOptions: CompilerOptions = {
 
 interface TestCase {
     testName: string;
-    hasErrors: boolean;
+    errorsCount: number;
     src: string;
     fix?: string;
     fileName: string;
@@ -32,7 +32,7 @@ interface TestCase {
 const TEST_CASES: Array<TestCase> = [
     {
         testName: "import sibling file",
-        hasErrors: true,
+        errorsCount: 1,
         fileName: `${baseUrl}/${prefixMap}app.module.ts`,
         src: `import { AppComponent } from './app.component';`,
         fix: `import { AppComponent } from '@src/app.component';`,
@@ -41,7 +41,7 @@ const TEST_CASES: Array<TestCase> = [
     },
     {
         testName: "import from parent folder",
-        hasErrors: true,
+        errorsCount: 1,
         fileName: `${baseUrl}/${prefixMap}/feature/feature.module.ts`,
         src: `import { AppComponent } from '../app.component';`,
         fix: `import { AppComponent } from '@src/app.component';`,
@@ -50,7 +50,7 @@ const TEST_CASES: Array<TestCase> = [
     },
     {
         testName: "import from sub-folder folder",
-        hasErrors: true,
+        errorsCount: 1,
         fileName: `${baseUrl}/${prefixMap}app.module.ts`,
         src: `import { AppComponent } from './feature/feature.component';`,
         fix: `import { AppComponent } from '@src/feature/feature.component';`,
@@ -59,7 +59,7 @@ const TEST_CASES: Array<TestCase> = [
     },
     {
         testName: "import from parent sub-folder folder",
-        hasErrors: true,
+        errorsCount: 1,
         fileName: `${baseUrl}/${prefixMap}/feature/app.module.ts`,
         src: `import { AppComponent } from '../feature2/feature.component';`,
         fix: `import { AppComponent } from '@src/feature2/feature.component';`,
@@ -67,8 +67,38 @@ const TEST_CASES: Array<TestCase> = [
         compilerOptions
     },
     {
+        testName: "multiple relative imports",
+        errorsCount: 2,
+        fileName: `${baseUrl}/${prefixMap}app.module.ts`,
+        src: `
+            import { AppComponent } from './app.component';
+            import { HomeComponent } from './home/home.component';
+        `,
+        fix: `
+            import { AppComponent } from '@src/app.component';
+            import { HomeComponent } from '@src/home/home.component';
+        `,
+        ruleArgs,
+        compilerOptions
+    },
+    {
+        testName: "correct import and incorrect import",
+        errorsCount: 1,
+        fileName: `${baseUrl}/${prefixMap}app.module.ts`,
+        src: `
+            import { AppComponent } from '@src/app.component';
+            import { HomeComponent } from './home/home.component';
+        `,
+        fix: `
+            import { AppComponent } from '@src/app.component';
+            import { HomeComponent } from '@src/home/home.component';
+        `,
+        ruleArgs,
+        compilerOptions
+    },
+    {
         testName: "import from node_modules generates no error",
-        hasErrors: false,
+        errorsCount: 0,
         fileName: `${baseUrl}/${prefixMap}app.module.ts`,
         src: `import { Component } from '@angular/core';`,
         ruleArgs,
@@ -76,7 +106,7 @@ const TEST_CASES: Array<TestCase> = [
     },
     {
         testName: "import non-relative path generates no error",
-        hasErrors: false,
+        errorsCount: 0,
         fileName: `${baseUrl}/${prefixMap}app.module.ts`,
         src: `import { Component } from '@src/app.component';`,
         ruleArgs,
@@ -222,11 +252,13 @@ function testCaseTemplate(tc: TestCase, applyFn: (sourceFile: SourceFile, rule: 
 
     const errors = applyFn(sourceFile, rule);
 
-    if (tc.hasErrors) {
-        expect(errors.length).toEqual(1);
-        expect(errors[0].getFailure()).toEqual(
-            expect.stringContaining("module is being loaded from a relative path. Please use a remapped path.")
-        );
+    if (tc.errorsCount) {
+        expect(errors.length).toEqual(tc.errorsCount);
+        errors.forEach((error) => {
+            expect(error.getFailure()).toEqual(
+                expect.stringContaining("module is being loaded from a relative path. Please use a remapped path.")
+            );
+        });
 
         const fixedResult = applyFixes(tc.src, errors);
         expect(fixedResult).toEqual(tc.fix);
