@@ -198,7 +198,13 @@ function createRemapFn(sourceFile: ts.SourceFile, opts: RemapOptions): (name: st
 
     return (relativeImportPath) => {
         const absPathToImport = joinPath(fileFolder, relativeImportPath);
+        const remappedImport = absPathToImport.replace(basePath, opts.prefix);
+        const normalizedImport = convertWindowsToPosixPath(remappedImport);
 
-        return absPathToImport.replace(basePath, opts.prefix);
+        return normalizedImport;
     };
+}
+
+function convertWindowsToPosixPath(modulePath: string) {
+    return modulePath.replace(/\\/g, "/");
 }
