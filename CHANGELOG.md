@@ -1,3 +1,9 @@
+## 0.0.4 (2019-09-08)
+
+### Bug Fixes
+
+-   **preferMappedImports:** link the docs on failure ([c94cf7f](https://github.com/nativescript/nativescript-tslint-rules/commit/c94cf7f))
+
 ## 0.0.3 (2019-08-05)
 
 ### Bug Fixes
