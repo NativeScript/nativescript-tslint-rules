@@ -22,9 +22,8 @@ export interface RuleArgs {
     [OPTION_PREFIX_MAPPED]: string;
 }
 
-// TODO: Add documentation for the recommended remapped paths and link it in the error message.
-const FAILURE_BODY_RELATIVE = "module is being loaded from a relative path. Please use a remapped path.";
-const FAILURE_BODY_INSIDE = "module path should not contain reference to current or parent directory inside";
+const FAILURE_BODY_RELATIVE = "module is being loaded from a relative path. Please use a remapped path. See: https://docs.nativescript.org/angular/code-sharing/intro#remapped-imports.";
+const FAILURE_BODY_INSIDE = "module path should not contain reference to current or parent directory inside. Please use a remapped path. See: https://docs.nativescript.org/angular/code-sharing/intro#remapped-imports.";
 
 // Looks for path separator `/` or `\\`(Windows style)
 // followed than one or two dot characters
