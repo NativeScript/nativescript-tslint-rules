@@ -56,12 +56,9 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "globals": {
-      "__TS_CONFIG__": "tsconfig.json"
-    },
     "moduleFileExtensions": [
-      "ts",
-      "js"
+      "js",
+      "ts"
     ],
     "collectCoverage": true,
     "collectCoverageFrom": [
@@ -69,9 +66,11 @@
     ],
     "coverageDirectory": "<rootDir>/reports/coverage",
     "transform": {
-      "\\.(ts)$": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+      "\\.(ts)$": "ts-jest"
     },
-    "testRegex": "/test/.*\\.spec\\.ts$"
+    "testRegex": "/test/.*\\.spec\\.ts$",
+    "preset": "ts-jest",
+    "testMatch": null
   },
   "husky": {
     "hooks": {
