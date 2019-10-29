@@ -35,3 +35,7 @@ The rule will propose a fix if:
 
 -   Has all the configurations in the `tslint.json`
 -   Used in typescript project with `baseUrl` and `path` mappings for either web or mobile files.
+
+## `no-android-resources` rule
+
+The rule forbids using constants inside `android.R` as they cause performance issues.
