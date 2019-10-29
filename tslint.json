@@ -4,6 +4,8 @@
     "array-type": [true, "generic"],
     "arrow-return-shorthand": true,
     "interface-name": [true, "never-prefix"],
+    "max-classes-per-file": false,
+    "max-line-length":[true, { "limit": 120, "check-regex": true, "ignore-pattern": "^const [a-zA-Z]+" }],
     "member-access": [true, "no-public"],
     "newline-before-return": true,
     "no-angle-bracket-type-assertion": false,
