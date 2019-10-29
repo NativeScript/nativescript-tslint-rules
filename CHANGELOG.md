@@ -1,3 +1,9 @@
+## 0.0.5 (2019-10-29)
+
+### Features
+
+-   no-android-resources rule ([04e1373](https://github.com/NativeScript/nativescript-tslint-rules/commit/04e1373))
+
 ## 0.0.4 (2019-09-08)
 
 ### Bug Fixes
